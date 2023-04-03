@@ -1,8 +1,45 @@
+// Include all the models 
 const Book = require("../models/book");
+const Author = require("../models/author");
+const BookInstance = require("../models/bookinstance");
+const Genre = require("../models/genre");
+
+// import async module
+const async = require("async");
 
 exports.index = (req, res) => {
-  res.send("NOT IMPLEMENTED: Site Home Page");
-};
+  async.parallel(
+    {
+        book_count(callback) {
+            Book.countDocuments({}, callback) // pass an empty object as match condition to find all douments of this collection
+        },
+        book_instance_count(callback) {
+            BookInstance.countDocuments({}, callback)
+        },
+        book_instance_available_count(callback) {
+            BookInstance.countDocuments({status:"available"}, callback)
+        },
+        author_count(callback) {
+            Author.countDocuments({}, callback);
+        },
+        genre_count(callback) {
+            Genre.countDocuments({}, callback);
+        },
+    }, 
+    (err, results) => { // this is an optional callback that is executed after all the parallel callbacks are executed
+                        // the callback is called with the same data type with the previous callback
+                        // => meaning return value of the previous callbacks are passed into results
+                        // => data: results will be accessible as {key: value} in the view 
+        res.render('index', 
+            { // at index page in the views, pass in the parameters
+                title: "Local Library Home",
+                error: err,
+                data: results,
+            }
+        )
+  })
+}
+
 
 // Display list of all books.
 exports.book_list = (req, res) => {
