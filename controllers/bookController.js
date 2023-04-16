@@ -3,6 +3,7 @@ const Book = require("../models/book");
 const Author = require("../models/author");
 const BookInstance = require("../models/bookinstance");
 const Genre = require("../models/genre");
+const asyncHandler = require('express-async-handler')
 
 // import async module
 const async = require("async");
@@ -40,16 +41,41 @@ exports.index = (req, res) => {
   })
 }
 
-
 // Display list of all books.
-exports.book_list = (req, res) => {
-  res.send("NOT IMPLEMENTED: Book list");
+exports.book_list = (req, res, next) => {
+  Book.find({},"title author") // find all the instances, select only title and author
+    .sort({title : 1}) // sort ascending by title
+    .populate("author") // join the author id to the author table
+    .exec(function (err, list_books) { // takes the returned document of list of books to the function
+      if (err) {
+        return next(err);
+      }
+
+      // successful, render
+      res.render("book_list", {title: "Book List", book_list: list_books}); // render takes that value
+    })
 };
 
 // Display detail page for a specific book.
-exports.book_detail = (req, res) => {
-  res.send(`NOT IMPLEMENTED: Book detail: ${req.params.id}`);
-};
+exports.book_detail = asyncHandler(async (req, res, next) => {
+  const [book, bookInstances] = await Promise.all([
+    Book.findById(req.params.id).populate("author").populate("genre").exec(),
+    BookInstance.find({ book:req.params.id }).exec()
+  ]);
+
+  if (book == null) {
+    // if there is no result
+    const err = new Error("Book not found")
+    err.status = 404;
+    return next(err);
+  }
+
+  res.render("book_detail", {
+    title: book.title,
+    book: book,
+    book_instances: bookInstances
+  })
+});
 
 // Display book create form on GET.
 exports.book_create_get = (req, res) => {

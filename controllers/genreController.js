@@ -1,18 +1,66 @@
+const Book = require("../models/book");
 const Genre = require("../models/genre");
 
+const async = require("async");
+const mongoose = require("mongoose");
+const { body, validationResult } = require("express-validator");
+
 // Display list of all Genre.
-exports.genre_list = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre list");
+exports.genre_list = (req, res, next) => {
+  Genre.find()
+    .sort({name: 1})
+    .exec(function(err, list_genre) {
+      if (err) {
+        return next(err)
+      }
+      // if successful, render
+      res.render("genre_list", {
+        title: "Genre List",
+        genre_list: list_genre
+      })
+    })
 };
 
 // Display detail page for a specific Genre.
-exports.genre_detail = (req, res) => {
-  res.send(`NOT IMPLEMENTED: Genre detail: ${req.params.id}`);
+// find the genre with the given genre id
+// find all the books with that specific genre
+exports.genre_detail = (req, res, next) => {
+  async.parallel(
+    {
+      genre(callback) {
+        Genre.findById(req.params.id).exec(callback)
+      },
+      genre_books(callback) {
+        Book.find({genre: req.params.id}).exec(callback)
+      }
+    },
+
+    (err, results) => {
+      if (err) {
+        return next(err)
+      }
+
+      if (results.genre == null) {
+        // no result was found (the request genre id user has provided is not valid)
+        const err = Error("Genre not found!")
+        err.status = 404;
+        return next(err)
+      }
+      // successful, so render
+      res.render("genre_detail", {
+        title: "Genre Detail",
+        genre: results.genre,
+        genre_books: results.genre_books
+      })
+    }
+  )
 };
 
 // Display Genre create form on GET.
-exports.genre_create_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre create GET");
+exports.genre_create_get = (req, res, next) => {
+  res.render("genre_form", {
+    title: "Create Genre"
+  })
 };
 
 // Handle Genre create on POST.

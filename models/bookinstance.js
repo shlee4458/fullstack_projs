@@ -1,3 +1,6 @@
+// import luxon
+const { DateTime } = require("luxon");
+
 // import mongoose
 const mongoose = require('mongoose');
 
@@ -22,5 +25,11 @@ BookInstanceSchema.virtual("url").get(function() {
     return `/catalog/bookinstance/${this._id}`
 })
 
+// define virtual property for due back formatting
+BookInstanceSchema.virtual("due_back_formatted").get(function() {
+  return DateTime.fromJSDate(this.due_back).toLocaleString(DateTime.DATE_MED)
+}) 
+
 // export model
 module.exports = mongoose.model("BookInstance", BookInstanceSchema);
+
