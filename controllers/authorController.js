@@ -1,6 +1,7 @@
 const Author = require("../models/author");
 const Book = require("../models/book")
 const asyncHandler = require("express-async-handler")
+const { body, validationResult } = require("express-validator")
 
 // Display list of all Authors.
 exports.author_list = (req, res, next) => {
@@ -42,14 +43,72 @@ exports.author_detail = asyncHandler(async (req, res, next) => {
 
 
 // Display Author create form on GET.
-exports.author_create_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Author create GET");
-};
+exports.author_create_get = (req, res, next) => {
+  res.render("author_form", { title: "Create Author" });
+}
 
 // Handle Author create on POST.
-exports.author_create_post = (req, res) => {
-  res.send("NOT IMPLEMENTED: Author create POST");
-};
+exports.author_create_post = [
+  // Middleware 1: Validate and sanitize fields
+  body("first_name")
+    .trim() // sanitize 1
+    .isLength({ min: 1 })
+    .escape() // sanitize 2
+    .withMessage("First name must be specified.") // if not provided
+    .isAlphanumeric() // Validate: if it is alphanumeric
+    .withMessage("First name has non-alphanumeric characters."), // if not alphanumeric
+
+  body("family_name")
+    .trim()
+    .isLength({ min: 1 })
+    .escape()
+    .withMessage("Family name must be specified.")
+    .isAlphanumeric()
+    .withMessage("Family name has non-alphanumeric characters."),
+
+  body("date_of_birth", "Invalid date of birth")
+    .optional( { checkFalsy: true})
+    .isISO8601()
+    .toDate(),
+ 
+  body("date_of_death", "Invalid date of death")
+    .optional({ checkFalsy: true }) // below is not executed if the value is falsy
+    .isISO8601()
+    .toDate(),
+    
+  // Middleware 2: Process request after validation and sanitization
+  asyncHandler(async (req, res, next) => {
+
+    // Extract request after validation and sanitization
+    const errors = validationResult(req)
+
+    // Create Author object with escaped and trimmed data
+    const author = new Author({
+      first_name: req.body.first_name,
+      family_name: req.body.family_name,
+      date_of_birth: req.body.date_of_birth,
+      date_of_death: req.body.date_of_death
+    });
+
+    // case 1: data from the form is not valid
+    if (!errors.isEmpty()) {
+    // There are errors. Render form again with sanitized values/erors messages
+      res.render("author_form", {
+        title: "Create Author",
+        author: author,
+        errors: errors.array()
+      });
+      return;
+    } else {
+      // case 2: data from form is valid
+      await author.save()
+      
+      // redirect to the new author record
+      res.render()
+
+    }
+  })
+]
 
 // Display Author delete form on GET.
 exports.author_delete_get = (req, res) => {
