@@ -1,3 +1,4 @@
+const { all } = require("async");
 const Author = require("../models/author");
 const Book = require("../models/book")
 const asyncHandler = require("express-async-handler")
@@ -111,14 +112,46 @@ exports.author_create_post = [
 ]
 
 // Display Author delete form on GET.
-exports.author_delete_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Author delete GET");
-};
+exports.author_delete_get = asyncHandler(async (req, res, next) => {
+  // Get details of the author and all their books (in parallel)
+  const [author, allBooksByAuthor] = await Promise.all([
+    Author.findById(req.params.id).exec(),
+    Book.find({author: req.params.id}, "title summary").exec()
+  ])
+
+  if (author === null) {
+    res.redirect("/catalog/authors");
+  }
+
+  res.render("author_delete", {
+    title: "Delete Author",
+    author: author,
+    author_books: allBooksByAuthor
+  })
+})
 
 // Handle Author delete on POST.
-exports.author_delete_post = (req, res) => {
-  res.send("NOT IMPLEMENTED: Author delete POST");
-};
+exports.author_delete_post = asyncHandler(async (req, res, next) => {
+  const [author, allBooksByAuthor] = await Promise.all([
+    Author.findById(req.params.id).exec(),
+    Book.find({ author: req.params.id }, "title summary").exec(),
+  ]);
+
+  if (allBooksByAuthor.length > 0) {
+    // Author has books. Render in same way as for GET route.
+    // render that you should delete books first before deleting author 
+    res.render("author_delete", {
+      title: "Delete Author",
+      author: author,
+      author_books: allBooksByAuthor,
+    });
+    return;
+  } else {
+    // Author has no books. Delete object and redirect
+    await Author.findByIdAndDelete(req.params.id);
+    res.redirect("/catalog/authors")
+  }
+})
 
 // Display Author update form on GET.
 exports.author_update_get = (req, res) => {

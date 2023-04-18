@@ -71,7 +71,7 @@ exports.genre_create_post = [ // use array of middleware function
   body('name', 'Genre name must contain at least 3 characters')
     .trim() // sanitization: remove whitespace at start and end
     .isLength({ min : 3 }) // validation: check the resulting string isn't empty
-    .escape(), // validation: remove HTML characters
+    .escape(), // sanitization: remove HTML characters
 
   // Middleware 2: Process request after validation and sanitization
   asyncHandler(async (req, res, next) => {
@@ -106,14 +106,42 @@ exports.genre_create_post = [ // use array of middleware function
 ];
 
 // Display Genre delete form on GET.
-exports.genre_delete_get = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre delete GET");
-};
+exports.genre_delete_get = asyncHandler(async (req, res, next) => {
+  const [genre, allBooksByGenre] = await Promise.all([
+    Genre.findById(req.params.id).exec(), // find specific genre
+    Book.find({genre: req.params.id}, "title summary").exec() // find all books of the genre
+  ])
+
+  if (genre === null) {
+    res.redirect("/catalog/genres")
+  }
+
+  res.render("genre_delete", {
+    title: "Delete Genre",
+    genre: genre,
+    books: allBooksByGenre
+  })
+})
 
 // Handle Genre delete on POST.
-exports.genre_delete_post = (req, res) => {
-  res.send("NOT IMPLEMENTED: Genre delete POST");
-};
+exports.genre_delete_post = asyncHandler(async (req, res, next) => {
+  const [genre, allBooksByGenre] = await Promise.all([
+    Genre.findById(req.params.id).exec(), // find specific genre
+    Book.find({genre: req.params.id}, "title summary").exec() // find all books of the genre
+  ])
+
+  if (allBooksByGenre.length > 0) {
+    res.render("genre_delete", {
+      title: "Delete Genre",
+      genre: genre,
+      books: allBooksByGenre
+    })
+    return;
+  } else {
+    await Genre.findByIdAndDelete(req.params.id);
+    res.redirect("/catalog/genres")
+  }
+})
 
 // Display Genre update form on GET.
 exports.genre_update_get = (req, res) => {
