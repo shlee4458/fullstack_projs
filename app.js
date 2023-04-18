@@ -8,7 +8,28 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const catalogRouter = require('./routes/catalog');
 
+const compression = require("compression"); // add compression middleware
+const helmet = require("helmet") // add protection against vulnerability
+const RateLimit = require("express-rate-limit") // set up rate limit - maximum of 20 requests per minute
+const limiter = RateLimit({
+  windowMS: 1 * 60 * 1000, // 1 minute
+  max: 20
+})
+
 var app = express();
+
+// apply rate limit to a ll requests
+app.use(limiter);
+
+// add helmet to the middleware chain
+// Set CSP headers to allow our Boostrap and Jquery to be served
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      "script-src": ["'self'", "code.jquery.com", "cdn.jsdelivr.net"],
+    },
+  })
+);
 
 // Set up mongoose connection
 const mongoose = require('mongoose')
@@ -31,6 +52,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(compression()); // compress all routes
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/catalog', catalogRouter);
