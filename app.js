@@ -8,6 +8,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const catalogRouter = require('./routes/catalog');
 
+const dotenv = require("dotenv").config()
 const compression = require("compression"); // add compression middleware
 const helmet = require("helmet") // add protection against vulnerability
 const RateLimit = require("express-rate-limit") // set up rate limit - maximum of 20 requests per minute
@@ -34,7 +35,8 @@ app.use(
 // Set up mongoose connection
 const mongoose = require('mongoose')
 mongoose.set("strictQuery", false);
-const mongoDB = "mongodb+srv://seunghanlee44:test123@cluster0.cry4loo.mongodb.net/local_library?retryWrites=true&w=majority"
+const dev_db_url = `${process.env.URI}`
+const mongoDB = process.env.MONGODB_URI || dev_db_url;
 
 main().catch(err => console.log(err));
 async function main() {
